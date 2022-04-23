@@ -1,4 +1,4 @@
-package main
+package ethoscli
 
 type EthosConfig struct {
 	ChainID           int64  `yaml:"chain_id"`
