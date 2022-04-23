@@ -17,5 +17,5 @@ tasks:
       - echo 'Building contracts at '$PROJECT_DIR
       - solc --abi $PROJECT_DIR/contracts/$CONTRACT_NAME.sol -o ./build --overwrite
       - solc --bin $PROJECT_DIR/contracts/$CONTRACT_NAME.sol -o ./build --overwrite
-      - abigen --bin=./build/$CONTRACT_NAME.bin --abi=./build/$CONTRACT_NAME.abi --pkg=main --out=$CONTRACT_NAME.go
+      - abigen --bin=./build/$CONTRACT_NAME.bin --abi=./build/$CONTRACT_NAME.abi --pkg=main --out=./cmd/ethos/$CONTRACT_NAME.go
     silent: true

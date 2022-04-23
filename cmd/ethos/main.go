@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	gocrypto "crypto"
 	"crypto/ecdsa"
+	"github.com/drgomesp/ethos/cmd/ethos/contracts"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -37,6 +40,51 @@ func main() {
 		log.Fatal().Err(err)
 	}
 
+	privateKey, publicKey, _ := CreateWallet(err)
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal().Err(errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey"))
+	}
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	nonce, err := rpc.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	gasPrice, err := rpc.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	auth := bind.NewKeyedTransactor(privateKey.(*ecdsa.PrivateKey))
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)     // in wei
+	auth.GasLimit = uint64(300000) // in units
+	auth.GasPrice = gasPrice
+
+	address, tx, _, err := contracts.DeployMain(auth, rpc)
+	if err != nil {
+		log.Fatal().Err(err).Msg("oops")
+		return
+	}
+
+	log.Debug().
+		Str("address", address.Hex()).
+		Interface("txn", tx).
+		Msg("contract deployed")
+
+	go GetBlocksPeriodically(rpc, cfg)
+
+	ws, err := ethclient.Dial(cfg.EndpointWebSocket)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	ListenForContractEvents(cfg, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
+}
+
+func CreateWallet(err error) (gocrypto.PublicKey, gocrypto.PrivateKey, error) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		log.Fatal().Err(err)
@@ -55,14 +103,7 @@ func main() {
 		Str("public key", hexutil.Encode(publicKeyBytes)[4:]).
 		Msg("")
 
-	go GetBlocksPeriodically(rpc, cfg)
-
-	ws, err := ethclient.Dial(cfg.EndpointWebSocket)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
-
-	ListenForContractEvents(cfg, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
+	return privateKey, publicKey, nil
 }
 
 func ListenForContractEvents(cfg EthosConfig, client *ethclient.Client, contactAddr string) {
