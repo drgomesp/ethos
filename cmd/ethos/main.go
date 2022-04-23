@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -14,8 +18,10 @@ import (
 	"time"
 )
 
-func main() {
-	cfg := EthosConfig{
+var cfg EthosConfig
+
+func init() {
+	cfg = EthosConfig{
 		EndpointJsonRPC:   os.Getenv("RPC_URL"),
 		EndpointWebSocket: os.Getenv("WS_URL"),
 	}
@@ -23,11 +29,31 @@ func main() {
 	// UNIX Time is faster and smaller than most timestamps
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC1123})
+}
 
+func main() {
 	rpc, err := ethclient.Dial(cfg.EndpointJsonRPC)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
+
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal().Err(errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey"))
+	}
+
+	privateKeyBytes := crypto.FromECDSA(privateKey)
+	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
+
+	log.Debug().
+		Str("private key", hexutil.Encode(privateKeyBytes)[2:]).
+		Str("public key", hexutil.Encode(publicKeyBytes)[4:]).
+		Msg("")
 
 	go GetBlocksPeriodically(rpc, cfg)
 
@@ -73,7 +99,7 @@ func GetBlocksPeriodically(client *ethclient.Client, cfg EthosConfig) {
 			}
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 
