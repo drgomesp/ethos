@@ -25,13 +25,11 @@ func Test(ctx context.Context) error {
 		log.Fatal().Err(err).Msg("rpc connection failed")
 	}
 
-	_, publicKey, err := CreateWallet(ctx, err)
+	address, privateKey, publicKey, err := CreateWallet(ctx, err)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create wallet")
 	}
-	GetBalance(ctx, publicKey, client)
-	//DeployContract(ctx, publicKey, client, privateKey)
-
+	go GetBalancePeriodically(ctx, address, client, privateKey, publicKey)
 	go GetBlocksPeriodically(ctx, client)
 
 	var ws *ethclient.Client
@@ -44,7 +42,12 @@ func Test(ctx context.Context) error {
 	return ListenForContractEvents(ctx, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
 }
 
-func CreateWallet(ctx context.Context, err error) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
+func CreateWallet(ctx context.Context, err error) (
+	common.Address,
+	*ecdsa.PrivateKey,
+	*ecdsa.PublicKey,
+	error,
+) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		log.Fatal().Err(err)
@@ -57,27 +60,45 @@ func CreateWallet(ctx context.Context, err error) (*ecdsa.PrivateKey, *ecdsa.Pub
 
 	privateKeyBytes := crypto.FromECDSA(privateKey)
 	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
+	publicKeyAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
 	log.Debug().
-		Str("private key", hexutil.Encode(privateKeyBytes)[2:]).
-		Str("public key", hexutil.Encode(publicKeyBytes)[4:]).
+		Str("private key", hexutil.Encode(privateKeyBytes)).
+		Str("public key", hexutil.Encode(publicKeyBytes)).
+		Str("address", publicKeyAddress.String()).
 		Msg("")
 
-	return privateKey, publicKeyECDSA, nil
+	return publicKeyAddress, privateKey, publicKeyECDSA, nil
 }
 
-func GetBalance(ctx context.Context, key *ecdsa.PublicKey, client *ethclient.Client) {
-	account := common.HexToAddress("0x71c7656ec7ab88b098defb751b7401b5f6d8976f")
-	balance, err := client.BalanceAt(context.Background(), account, nil)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get balance")
+func GetBalancePeriodically(
+	ctx context.Context,
+	address common.Address,
+	client *ethclient.Client,
+	privateKey *ecdsa.PrivateKey,
+	publicKey *ecdsa.PublicKey,
+) {
+	for {
+		balance, err := client.BalanceAt(ctx, address, nil)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get balance")
+		}
+
+		log.Debug().Int64("balance", balance.Int64()).Msg("")
+		time.Sleep(5 * time.Second)
+
+		if balance.Int64() > 0 {
+			DeployContract(ctx, client, privateKey, publicKey)
+		}
 	}
-
-	log.Debug().Int64("balance", balance.Int64()).Msg("")
 }
 
-func DeployContract(ctx context.Context, publicKey *ecdsa.PublicKey, rpc *ethclient.Client,
-	privateKey *ecdsa.PrivateKey) {
+func DeployContract(
+	ctx context.Context,
+	rpc *ethclient.Client,
+	privateKey *ecdsa.PrivateKey,
+	publicKey *ecdsa.PublicKey,
+) {
 
 	fromAddress := crypto.PubkeyToAddress(*publicKey)
 	nonce, err := rpc.PendingNonceAt(ctx, fromAddress)
