@@ -89,10 +89,19 @@ func GetBalancePeriodically(
 		time.Sleep(5 * time.Second)
 
 		if !contractDeployed && balance.Int64() > 0 {
-			if err := DeployContract(ctx, client, privateKey, publicKey); err != nil {
+			var addr *common.Address
+			if addr, err = DeployContract(ctx, client, privateKey, publicKey); err != nil {
 				log.Error().Err(err).Msg("failed to deploy contract")
 			} else {
 				contractDeployed = true
+				instance, err := contracts.NewMain(*addr, client)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to instantiate contract")
+				}
+
+				log.Debug().
+					Interface("contract", instance).
+					Msg("contract instantiated")
 			}
 		}
 	}
@@ -103,17 +112,16 @@ func DeployContract(
 	rpc *ethclient.Client,
 	privateKey *ecdsa.PrivateKey,
 	publicKey *ecdsa.PublicKey,
-) error {
-
+) (*common.Address, error) {
 	fromAddress := crypto.PubkeyToAddress(*publicKey)
 	nonce, err := rpc.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	gasPrice, err := rpc.SuggestGasPrice(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	auth, err := bind.NewKeyedTransactorWithChainID(
@@ -121,7 +129,7 @@ func DeployContract(
 		big.NewInt(TestConfig.ChainID),
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	auth.Nonce = big.NewInt(int64(nonce))
@@ -131,7 +139,7 @@ func DeployContract(
 
 	address, tx, _, err := contracts.DeployMain(auth, rpc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debug().
@@ -139,7 +147,7 @@ func DeployContract(
 		Interface("txn", tx).
 		Msg("contract deployed")
 
-	return nil
+	return &address, nil
 }
 
 func ListenForContractEvents(
