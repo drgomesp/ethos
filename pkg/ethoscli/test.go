@@ -36,10 +36,9 @@ func Test(ctx context.Context) error {
 	ws, err = ethclient.Dial(TestConfig.EndpointWebSocket)
 	if err != nil {
 		log.Fatal().Err(err).Msg("websocket connection failed")
-
 	}
 
-	return ListenForContractEvents(ctx, ws, "0xb5f7B2788cdBd7d3040DC5365B5b07f7aEED7BB8")
+	return ListenForContractEvents(ctx, ws, "0x19fb4ff7127fe281a893dc1b5eeacaa7fb197d9c")
 }
 
 func CreateWallet(ctx context.Context, err error) (
@@ -86,7 +85,7 @@ func GetBalancePeriodically(
 			log.Fatal().Err(err).Msg("failed to get balance")
 		}
 
-		log.Debug().Int64("balance", balance.Int64()).Msg("")
+		log.Debug().Int64("balance", balance.Int64()).Msg("getting account balance")
 		time.Sleep(5 * time.Second)
 
 		if !contractDeployed && balance.Int64() > 0 {
@@ -169,7 +168,7 @@ func ListenForContractEvents(
 				return err
 			}
 
-			log.Debug().RawJSON("event", j).Msg("")
+			log.Debug().RawJSON("event", j).Msg("contract event received")
 		}
 	}
 }
@@ -182,7 +181,7 @@ func GetBlocksPeriodically(ctx context.Context, client *ethclient.Client) {
 			}
 		}
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 
@@ -212,5 +211,5 @@ func LogBlock(block *types.Block) {
 		Interface("difficulty", block.Difficulty().Uint64()).
 		Interface("hash", block.Hash().Hex()).
 		Interface("transactions", len(block.Transactions())).
-		Msg("block")
+		Msg("block received")
 }

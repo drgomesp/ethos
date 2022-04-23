@@ -10,14 +10,12 @@ import (
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
-	"time"
 )
 
 func init() {
 	// UNIX Time is faster and smaller than most timestamps
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC1123})
-	log.Logger = logger
+	zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Caller().Logger()
 }
 
 func main() {
