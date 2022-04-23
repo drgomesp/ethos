@@ -12,17 +12,20 @@ import (
 )
 
 const (
-	Endpoint       = EndpointRemote
 	EndpointLocal  = "http://localhost:8545"
 	EndpointRemote = "https://cloudflare-eth.com"
 )
 
 func main() {
+	cfg := &EthosConfig{
+		EndpointJsonRPC: EndpointRemote,
+	}
+
 	// UNIX Time is faster and smaller than most timestamps
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC1123})
 
-	client, err := ethclient.Dial(Endpoint)
+	client, err := ethclient.Dial(cfg.EndpointJsonRPC)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
