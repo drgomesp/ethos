@@ -5,8 +5,8 @@ import (
 	"github.com/drgomesp/ethos/pkg/ethoscli"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/yaml.v3"
+	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 )
@@ -21,19 +21,19 @@ func main() {
 	app := &cli.App{
 		Name:  "greet",
 		Usage: "fight the loneliness!",
-		Commands: []cli.Command{
+		Commands: []*cli.Command{
 			{
-				Name:      "chain",
-				ShortName: "c",
-				Usage:     "Start a local Ethereum blockchain node",
+				Name:    "chain",
+				Aliases: []string{"c"},
+				Usage:   "Start a local Ethereum blockchain node",
 				Action: func(ctx *cli.Context) error {
 					return ethoscli.Chain(context.Background())
 				},
 			},
 			{
-				Name:      "test",
-				ShortName: "t",
-				Usage:     "start with the shenanigans...",
+				Name:    "test",
+				Aliases: []string{"t"},
+				Usage:   "start with the shenanigans...",
 				Action: func(ctx *cli.Context) error {
 					cfg, err := LoadConfigFromYaml()
 					if err != nil {
