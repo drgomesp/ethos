@@ -16,8 +16,8 @@ import (
 
 func main() {
 	cfg := EthosConfig{
-		EndpointJsonRPC:   os.Getenv("INFURA_RPC_URL"),
-		EndpointWebSocket: os.Getenv("INFURA_WS_URL"),
+		EndpointJsonRPC:   os.Getenv("RPC_URL"),
+		EndpointWebSocket: os.Getenv("WS_URL"),
 	}
 
 	// UNIX Time is faster and smaller than most timestamps
