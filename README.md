@@ -1,5 +1,5 @@
 # 🛠 Ethos
->  The Ethereum toolkit for lazy developers.
+> An agency-increasing toolkit for Ethereum developers.
 
 ## Dependencies
 
