@@ -58,7 +58,7 @@ func main() {
 }
 
 func LoadConfigFromYaml() (ethoscli.EthosConfig, error) {
-	f, err := ioutil.ReadFile("ethos.yaml")
+	f, err := ioutil.ReadFile("./ethos.yaml")
 	if err != nil {
 		return ethoscli.NilConfig, err
 	}

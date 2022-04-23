@@ -22,10 +22,13 @@ var TestConfig EthosConfig
 func Test(ctx context.Context) error {
 	client, err := ethclient.Dial(TestConfig.EndpointJsonRPC)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Err(err).Msg("rpc connection failed")
 	}
 
-	_, publicKey, _ := CreateWallet(ctx, err)
+	_, publicKey, err := CreateWallet(ctx, err)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create wallet")
+	}
 	GetBalance(ctx, publicKey, client)
 	//DeployContract(ctx, publicKey, client, privateKey)
 

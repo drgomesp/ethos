@@ -1,3 +1,4 @@
-chainId: 4
-rpcURL: "http://localhost:8545"
-wsURL: "ws://localhost:8546"
+---
+chain_id: 4
+endpoint_json_rpc: http://localhost:8545
+endpoint_web_socket: ws://localhost:8546
