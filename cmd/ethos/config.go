@@ -1,5 +1,13 @@
 package main
 
 type EthosConfig struct {
-	EndpointJsonRPC string
+	EndpointJsonRPC   string
+	EndpointWebSocket string
+}
+
+func DefaultEthosConfig() EthosConfig {
+	return EthosConfig{
+		EndpointJsonRPC:   "https://cloudflare-eth.com",
+		EndpointWebSocket: "wss://rinkeby.infura.io/ws",
+	}
 }
