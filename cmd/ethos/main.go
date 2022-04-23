@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -15,8 +16,8 @@ import (
 
 func main() {
 	cfg := EthosConfig{
-		EndpointJsonRPC:   "https://mainnet.infura.io/v3/e744e8304d9442b3aa9f616cb3a3f4d2",
-		EndpointWebSocket: "wss://mainnet.infura.io/ws/v3/e744e8304d9442b3aa9f616cb3a3f4d2",
+		EndpointJsonRPC:   os.Getenv("INFURA_RPC_URL"),
+		EndpointWebSocket: os.Getenv("INFURA_WS_URL"),
 	}
 
 	// UNIX Time is faster and smaller than most timestamps
