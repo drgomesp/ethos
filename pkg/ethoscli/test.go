@@ -29,6 +29,7 @@ func Test(ctx context.Context) error {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create wallet")
 	}
+
 	go GetBalancePeriodically(ctx, address, client, privateKey, publicKey)
 	go GetBlocksPeriodically(ctx, client)
 

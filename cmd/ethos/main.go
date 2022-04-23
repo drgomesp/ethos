@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"github.com/drgomesp/ethos/pkg/ethoscli"
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
