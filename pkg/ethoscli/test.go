@@ -39,7 +39,7 @@ func Test(ctx context.Context) error {
 
 	}
 
-	return ListenForContractEvents(ctx, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
+	return ListenForContractEvents(ctx, ws, "0xb5f7B2788cdBd7d3040DC5365B5b07f7aEED7BB8")
 }
 
 func CreateWallet(ctx context.Context, err error) (
@@ -78,6 +78,8 @@ func GetBalancePeriodically(
 	privateKey *ecdsa.PrivateKey,
 	publicKey *ecdsa.PublicKey,
 ) {
+	var contractDeployed bool
+
 	for {
 		balance, err := client.BalanceAt(ctx, address, nil)
 		if err != nil {
@@ -87,8 +89,12 @@ func GetBalancePeriodically(
 		log.Debug().Int64("balance", balance.Int64()).Msg("")
 		time.Sleep(5 * time.Second)
 
-		if balance.Int64() > 0 {
-			DeployContract(ctx, client, privateKey, publicKey)
+		if !contractDeployed && balance.Int64() > 0 {
+			if err := DeployContract(ctx, client, privateKey, publicKey); err != nil {
+				log.Error().Err(err).Msg("failed to deploy contract")
+			} else {
+				contractDeployed = true
+			}
 		}
 	}
 }
@@ -98,17 +104,17 @@ func DeployContract(
 	rpc *ethclient.Client,
 	privateKey *ecdsa.PrivateKey,
 	publicKey *ecdsa.PublicKey,
-) {
+) error {
 
 	fromAddress := crypto.PubkeyToAddress(*publicKey)
 	nonce, err := rpc.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
-		log.Fatal().Err(err)
+		return err
 	}
 
 	gasPrice, err := rpc.SuggestGasPrice(ctx)
 	if err != nil {
-		log.Fatal().Err(err)
+		return err
 	}
 
 	auth, err := bind.NewKeyedTransactorWithChainID(
@@ -116,7 +122,7 @@ func DeployContract(
 		big.NewInt(TestConfig.ChainID),
 	)
 	if err != nil {
-		log.Fatal().Err(err)
+		return err
 	}
 
 	auth.Nonce = big.NewInt(int64(nonce))
@@ -126,13 +132,15 @@ func DeployContract(
 
 	address, tx, _, err := contracts.DeployMain(auth, rpc)
 	if err != nil {
-		log.Error().Err(err).Msg("oops")
+		return err
 	}
 
 	log.Debug().
 		Str("address", address.Hex()).
 		Interface("txn", tx).
 		Msg("contract deployed")
+
+	return nil
 }
 
 func ListenForContractEvents(
