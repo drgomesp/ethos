@@ -67,28 +67,29 @@ func ListenForContractEvents(cfg EthosConfig, client *ethclient.Client, contactA
 
 func GetBlocksPeriodically(client *ethclient.Client, cfg EthosConfig) {
 	for {
-		header := GetBlockHeaderOrPanic(client)
-		block := GetBlockOrPanic(client, header)
-
-		LogBlock(block)
+		if header := GetBlockHeaderOrError(client); header != nil {
+			if block := GetBlockOrError(client, header); block != nil {
+				LogBlock(block)
+			}
+		}
 
 		time.Sleep(1 * time.Second)
 	}
 }
 
-func GetBlockHeaderOrPanic(client *ethclient.Client) *types.Header {
+func GetBlockHeaderOrError(client *ethclient.Client) *types.Header {
 	header, err := client.HeaderByNumber(context.TODO(), nil)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Error().Err(err)
 	}
 	return header
 }
 
-func GetBlockOrPanic(client *ethclient.Client, header *types.Header) *types.Block {
+func GetBlockOrError(client *ethclient.Client, header *types.Header) *types.Block {
 	blockNumber := big.NewInt(header.Number.Int64())
 	block, err := client.BlockByNumber(context.TODO(), blockNumber)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Error().Err(err)
 	}
 
 	return block
