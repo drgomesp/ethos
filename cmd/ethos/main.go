@@ -17,13 +17,20 @@ import (
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"os"
+	"strconv"
 	"time"
 )
 
 var cfg EthosConfig
 
 func init() {
+	chainId, err := strconv.Atoi(os.Getenv("CHAIN_ID"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
 	cfg = EthosConfig{
+		ChainID:           int64(chainId),
 		EndpointJsonRPC:   os.Getenv("RPC_URL"),
 		EndpointWebSocket: os.Getenv("WS_URL"),
 	}
@@ -35,26 +42,59 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-	rpc, err := ethclient.Dial(cfg.EndpointJsonRPC)
+	client, err := ethclient.Dial(cfg.EndpointJsonRPC)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Err(err).Msg("rpc connection failed")
 	}
 
-	//privateKey, publicKey, _ := CreateWallet(ctx, err)
-	//DeployContract(ctx, publicKey, err, rpc, privateKey)
+	privateKey, publicKey, _ := CreateWallet(ctx, err)
+	GetBalance(ctx, publicKey, client)
+	DeployContract(ctx, publicKey, client, privateKey)
 
-	go GetBlocksPeriodically(ctx, rpc, cfg)
+	go GetBlocksPeriodically(ctx, client, cfg)
 
-	ws, err := ethclient.Dial(cfg.EndpointWebSocket)
+	var ws *ethclient.Client
+	ws, err = ethclient.Dial(cfg.EndpointWebSocket)
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Err(err).Msg("web socket connection failed")
 	}
 
 	ListenForContractEvents(ctx, cfg, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
 }
 
-func DeployContract(ctx context.Context, publicKey *ecdsa.PublicKey, err error,
-	rpc *ethclient.Client,
+func CreateWallet(ctx context.Context, err error) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal().Err(errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey"))
+	}
+
+	privateKeyBytes := crypto.FromECDSA(privateKey)
+	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
+
+	log.Debug().
+		Str("private key", hexutil.Encode(privateKeyBytes)[2:]).
+		Str("public key", hexutil.Encode(publicKeyBytes)[4:]).
+		Msg("")
+
+	return privateKey, publicKeyECDSA, nil
+}
+
+func GetBalance(ctx context.Context, key *ecdsa.PublicKey, client *ethclient.Client) {
+	account := common.HexToAddress("0x71c7656ec7ab88b098defb751b7401b5f6d8976f")
+	balance, err := client.BalanceAt(context.Background(), account, nil)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get balance")
+	}
+
+	log.Debug().Int64("balance", balance.Int64()).Msg("")
+}
+
+func DeployContract(ctx context.Context, publicKey *ecdsa.PublicKey, rpc *ethclient.Client,
 	privateKey *ecdsa.PrivateKey) {
 
 	fromAddress := crypto.PubkeyToAddress(*publicKey)
@@ -90,28 +130,6 @@ func DeployContract(ctx context.Context, publicKey *ecdsa.PublicKey, err error,
 		Str("address", address.Hex()).
 		Interface("txn", tx).
 		Msg("contract deployed")
-}
-
-func CreateWallet(ctx context.Context, err error) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	privateKey, err := crypto.GenerateKey()
-	if err != nil {
-		log.Fatal().Err(err)
-	}
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal().Err(errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey"))
-	}
-
-	privateKeyBytes := crypto.FromECDSA(privateKey)
-	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
-
-	log.Debug().
-		Str("private key", hexutil.Encode(privateKeyBytes)[2:]).
-		Str("public key", hexutil.Encode(publicKeyBytes)[4:]).
-		Msg("")
-
-	return privateKey, publicKeyECDSA, nil
 }
 
 func ListenForContractEvents(ctx context.Context, cfg EthosConfig, client *ethclient.Client,
