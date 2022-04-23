@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	gocrypto "crypto"
 	"crypto/ecdsa"
-	"github.com/drgomesp/ethos/cmd/ethos/contracts"
+	"github.com/drgomesp/ethos/contracts"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -35,29 +34,48 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
 	rpc, err := ethclient.Dial(cfg.EndpointJsonRPC)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
 
-	privateKey, publicKey, _ := CreateWallet(err)
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal().Err(errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey"))
-	}
+	//privateKey, publicKey, _ := CreateWallet(ctx, err)
+	//DeployContract(ctx, publicKey, err, rpc, privateKey)
 
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := rpc.PendingNonceAt(context.Background(), fromAddress)
+	go GetBlocksPeriodically(ctx, rpc, cfg)
+
+	ws, err := ethclient.Dial(cfg.EndpointWebSocket)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
 
-	gasPrice, err := rpc.SuggestGasPrice(context.Background())
+	ListenForContractEvents(ctx, cfg, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
+}
+
+func DeployContract(ctx context.Context, publicKey *ecdsa.PublicKey, err error,
+	rpc *ethclient.Client,
+	privateKey *ecdsa.PrivateKey) {
+
+	fromAddress := crypto.PubkeyToAddress(*publicKey)
+	nonce, err := rpc.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
 
-	auth := bind.NewKeyedTransactor(privateKey.(*ecdsa.PrivateKey))
+	gasPrice, err := rpc.SuggestGasPrice(ctx)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(
+		privateKey,
+		big.NewInt(cfg.ChainID),
+	)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)     // in wei
 	auth.GasLimit = uint64(300000) // in units
@@ -65,26 +83,16 @@ func main() {
 
 	address, tx, _, err := contracts.DeployMain(auth, rpc)
 	if err != nil {
-		log.Fatal().Err(err).Msg("oops")
-		return
+		log.Error().Err(err).Msg("oops")
 	}
 
 	log.Debug().
 		Str("address", address.Hex()).
 		Interface("txn", tx).
 		Msg("contract deployed")
-
-	go GetBlocksPeriodically(rpc, cfg)
-
-	ws, err := ethclient.Dial(cfg.EndpointWebSocket)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
-
-	ListenForContractEvents(cfg, ws, "0xD7bEA2b69C7a1015aAdAA134e564eEe6d34149C0")
 }
 
-func CreateWallet(err error) (gocrypto.PublicKey, gocrypto.PrivateKey, error) {
+func CreateWallet(ctx context.Context, err error) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		log.Fatal().Err(err)
@@ -103,17 +111,18 @@ func CreateWallet(err error) (gocrypto.PublicKey, gocrypto.PrivateKey, error) {
 		Str("public key", hexutil.Encode(publicKeyBytes)[4:]).
 		Msg("")
 
-	return privateKey, publicKey, nil
+	return privateKey, publicKeyECDSA, nil
 }
 
-func ListenForContractEvents(cfg EthosConfig, client *ethclient.Client, contactAddr string) {
+func ListenForContractEvents(ctx context.Context, cfg EthosConfig, client *ethclient.Client,
+	contactAddr string) {
 	contractAddress := common.HexToAddress(contactAddr)
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{contractAddress},
 	}
 
 	logs := make(chan types.Log)
-	sub, err := client.SubscribeFilterLogs(context.TODO(), query, logs)
+	sub, err := client.SubscribeFilterLogs(ctx, query, logs)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
@@ -132,10 +141,10 @@ func ListenForContractEvents(cfg EthosConfig, client *ethclient.Client, contactA
 	}
 }
 
-func GetBlocksPeriodically(client *ethclient.Client, cfg EthosConfig) {
+func GetBlocksPeriodically(ctx context.Context, client *ethclient.Client, cfg EthosConfig) {
 	for {
-		if header := GetBlockHeaderOrError(client); header != nil {
-			if block := GetBlockOrError(client, header); block != nil {
+		if header := GetBlockHeaderOrError(ctx, client); header != nil {
+			if block := GetBlockOrError(ctx, client, header); block != nil {
 				LogBlock(block)
 			}
 		}
@@ -144,17 +153,18 @@ func GetBlocksPeriodically(client *ethclient.Client, cfg EthosConfig) {
 	}
 }
 
-func GetBlockHeaderOrError(client *ethclient.Client) *types.Header {
-	header, err := client.HeaderByNumber(context.TODO(), nil)
+func GetBlockHeaderOrError(ctx context.Context, client *ethclient.Client) *types.Header {
+	header, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		log.Error().Err(err)
 	}
 	return header
 }
 
-func GetBlockOrError(client *ethclient.Client, header *types.Header) *types.Block {
+func GetBlockOrError(ctx context.Context, client *ethclient.Client,
+	header *types.Header) *types.Block {
 	blockNumber := big.NewInt(header.Number.Int64())
-	block, err := client.BlockByNumber(context.TODO(), blockNumber)
+	block, err := client.BlockByNumber(ctx, blockNumber)
 	if err != nil {
 		log.Error().Err(err)
 	}

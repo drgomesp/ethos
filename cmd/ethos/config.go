@@ -1,6 +1,7 @@
 package main
 
 type EthosConfig struct {
+	ChainID           int64
 	EndpointJsonRPC   string
 	EndpointWebSocket string
 }

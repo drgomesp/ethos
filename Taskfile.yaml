@@ -7,14 +7,15 @@ env:
 
 tasks:
 
-  bc:
+  build:
     cmds:
-      - task build-contracts
-    silent: true
+      - @echo 'Build started'
+      - go build ./cmd/ethos/*.go
+      - go install
 
   build-contracts:
     cmds:
-      - echo 'Building contracts at '$PROJECT_DIR
+      - @echo 'Building contracts at '$PROJECT_DIR
       - solc --abi $PROJECT_DIR/contracts/$CONTRACT_NAME.sol -o ./build --overwrite
       - solc --bin $PROJECT_DIR/contracts/$CONTRACT_NAME.sol -o ./build --overwrite
       - abigen --bin=./build/$CONTRACT_NAME.bin --abi=./build/$CONTRACT_NAME.abi --pkg=main --out=./cmd/ethos/$CONTRACT_NAME.go
