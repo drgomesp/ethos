@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,27 +27,40 @@ func main() {
 		log.Fatal().Err(err)
 	}
 
-	ctx := context.Background()
-
 	for {
-		header, err := client.HeaderByNumber(ctx, nil)
-		if err != nil {
-			log.Fatal().Err(err)
-		}
+		header := GetBlockHeaderOrPanic(client)
+		block := GetBlockOrPanic(client, header)
 
-		blockNumber := big.NewInt(header.Number.Int64())
-		block, err := client.BlockByNumber(context.Background(), blockNumber)
-		if err != nil {
-			log.Fatal().Err(err)
-		}
-
-		log.Debug().Interface("number", block.Number().Uint64()).
-			Interface("time", block.Time()).
-			Interface("difficulty", block.Difficulty().Uint64()).
-			Interface("hash", block.Hash().Hex()).
-			Interface("transactions", len(block.Transactions())).
-			Msg("received block")
+		LogBlock(block)
 
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func GetBlockHeaderOrPanic(client *ethclient.Client) *types.Header {
+	header, err := client.HeaderByNumber(context.TODO(), nil)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	return header
+}
+
+func GetBlockOrPanic(client *ethclient.Client, header *types.Header) *types.Block {
+	blockNumber := big.NewInt(header.Number.Int64())
+	block, err := client.BlockByNumber(context.TODO(), blockNumber)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	return block
+}
+
+func LogBlock(block *types.Block) {
+	log.Debug().
+		Interface("height", block.Number().Uint64()).
+		Interface("time", block.Time()).
+		Interface("difficulty", block.Difficulty().Uint64()).
+		Interface("hash", block.Hash().Hex()).
+		Interface("transactions", len(block.Transactions())).
+		Msg("block")
 }
