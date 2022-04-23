@@ -1,5 +1,7 @@
 package ethoscli
 
+var NilConfig = EthosConfig{}
+
 type EthosConfig struct {
 	ChainID           int64  `yaml:"chain_id"`
 	EndpointJsonRPC   string `yaml:"endpoint_json_rpc"`

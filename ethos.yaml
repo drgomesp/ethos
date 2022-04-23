@@ -1,0 +1,3 @@
+chainId: 4
+rpcURL: "http://localhost:8545"
+wsURL: "ws://localhost:8546"

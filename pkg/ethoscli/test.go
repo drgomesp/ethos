@@ -25,11 +25,11 @@ func Test(ctx context.Context) error {
 		log.Fatal().Err(err)
 	}
 
-	privateKey, publicKey, _ := CreateWallet(ctx, err)
+	_, publicKey, _ := CreateWallet(ctx, err)
 	GetBalance(ctx, publicKey, client)
-	DeployContract(ctx, publicKey, client, privateKey)
+	//DeployContract(ctx, publicKey, client, privateKey)
 
-	go GetBlocksPeriodically(ctx, client, TestConfig)
+	go GetBlocksPeriodically(ctx, client)
 
 	var ws *ethclient.Client
 	ws, err = ethclient.Dial(TestConfig.EndpointWebSocket)
@@ -142,7 +142,7 @@ func ListenForContractEvents(
 	}
 }
 
-func GetBlocksPeriodically(ctx context.Context, client *ethclient.Client, cfg EthosConfig) {
+func GetBlocksPeriodically(ctx context.Context, client *ethclient.Client) {
 	for {
 		if header := GetBlockHeaderOrError(ctx, client); header != nil {
 			if block := GetBlockOrError(ctx, client, header); block != nil {

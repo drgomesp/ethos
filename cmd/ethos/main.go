@@ -7,27 +7,17 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"os"
-	"strconv"
 	"time"
 )
 
 func init() {
-	chainId, err := strconv.Atoi(os.Getenv("CHAIN_ID"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
 	// UNIX Time is faster and smaller than most timestamps
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC1123})
 	log.Logger = logger
-
-	ethoscli.TestConfig = ethoscli.EthosConfig{
-		ChainID:           int64(chainId),
-		EndpointJsonRPC:   os.Getenv("RPC_URL"),
-		EndpointWebSocket: os.Getenv("WS_URL"),
-	}
 }
 
 func main() {
@@ -36,11 +26,9 @@ func main() {
 		Usage: "fight the loneliness!",
 		Commands: []cli.Command{
 			{
-				Name:        "chain",
-				ShortName:   "c",
-				Usage:       "Start a local Ethereum blockchain node",
-				UsageText:   "Usage text",
-				Description: "DESC: Start a local Ethereum blockchain node",
+				Name:      "chain",
+				ShortName: "c",
+				Usage:     "Start a local Ethereum blockchain node",
 				Action: func(ctx *cli.Context) error {
 					return ethoscli.Chain(context.Background())
 				},
@@ -48,7 +36,15 @@ func main() {
 			{
 				Name:      "test",
 				ShortName: "t",
+				Usage:     "start with the shenanigans...",
 				Action: func(ctx *cli.Context) error {
+					cfg, err := LoadConfigFromYaml()
+					if err != nil {
+						return err
+					}
+
+					ethoscli.TestConfig = cfg
+
 					return ethoscli.Test(context.Background())
 				},
 			},
@@ -59,4 +55,19 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to run")
 	}
+}
+
+func LoadConfigFromYaml() (ethoscli.EthosConfig, error) {
+	f, err := ioutil.ReadFile("ethos.yaml")
+	if err != nil {
+		return ethoscli.NilConfig, err
+	}
+
+	var cfg ethoscli.EthosConfig
+	err = yaml.Unmarshal(f, &cfg)
+	if err != nil {
+		return ethoscli.NilConfig, err
+	}
+
+	return cfg, nil
 }
