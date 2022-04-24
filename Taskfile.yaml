@@ -2,7 +2,7 @@ version: '3'
 
 env:
 
-  PROJECT_DIR: '/home/drgomesp/src/scaffold-eth/packages/hardhat'
+  PROJECT_DIR: '.'
   CONTRACT_NAME: 'YourContract'
 
 tasks:
@@ -23,8 +23,8 @@ tasks:
 
   build-contracts:
     cmds:
-      - echo 'Building contracts at '$PROJECT_DIR
-      - solc --abi $PROJECT_DIR/contracts/$CONTRACT_NAME.sol -o ./build --overwrite
-      - solc --bin $PROJECT_DIR/contracts/$CONTRACT_NAME.sol -o ./build --overwrite
+      - echo 'Building contracts...'
+      - solc --abi ./contracts/$CONTRACT_NAME.sol -o ./build --overwrite
+      - solc --bin ./contracts/$CONTRACT_NAME.sol -o ./build --overwrite
       - abigen --bin=./build/$CONTRACT_NAME.bin --abi=./build/$CONTRACT_NAME.abi --pkg=main --out=./cmd/ethos/$CONTRACT_NAME.go
     silent: true

@@ -2,8 +2,11 @@ package ethoscli
 
 var Config = DefaultEthosConfig()
 
+const EthosFile = "ethos.yaml"
+
 type EthosConfig struct {
 	ContractsDir      string `yaml:"contracts_dir"`
+	BuildDir          string `yaml:"build_dir"`
 	ChainID           int64  `yaml:"chain_id"`
 	EndpointJsonRPC   string `yaml:"endpoint_json_rpc"`
 	EndpointWebSocket string `yaml:"endpoint_web_socket"`
@@ -12,6 +15,7 @@ type EthosConfig struct {
 func DefaultEthosConfig() *EthosConfig {
 	return &EthosConfig{
 		ContractsDir:      "./contracts",
+		BuildDir:          "./build",
 		ChainID:           1337,
 		EndpointJsonRPC:   "https://cloudflare-eth.com",
 		EndpointWebSocket: "wss://rinkeby.infura.io/ws",

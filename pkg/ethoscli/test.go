@@ -3,7 +3,6 @@ package ethoscli
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/drgomesp/ethos/contracts"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -95,14 +94,15 @@ func GetBalancePeriodically(
 				log.Error().Err(err).Msg("failed to deploy contract")
 			} else {
 				contractDeployed = true
-				instance, err := contracts.NewMain(*addr, client)
-				if err != nil {
-					log.Fatal().Err(err).Msg("failed to instantiate contract")
-				}
-
-				log.Debug().
-					Interface("contract", instance).
-					Msg("contract instantiated")
+				_ = addr
+				//instance, err := contracts.NewMain(*addr, client)
+				//if err != nil {
+				//	log.Fatal().Err(err).Msg("failed to instantiate contract")
+				//}
+				//
+				//log.Debug().
+				//	Interface("contract", instance).
+				//	Msg("contract instantiated")
 			}
 		}
 	}
@@ -138,15 +138,16 @@ func DeployContract(
 	auth.GasLimit = uint64(300000) // in units
 	auth.GasPrice = gasPrice
 
-	address, tx, _, err := contracts.DeployMain(auth, rpc)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debug().
-		Str("address", address.Hex()).
-		Interface("txn", tx).
-		Msg("contract deployed")
+	var address common.Address
+	//address, tx, _, err := contracts.DeployMain(auth, rpc)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//log.Debug().
+	//	Str("address", address.Hex()).
+	//	Interface("txn", tx).
+	//	Msg("contract deployed")
 
 	return &address, nil
 }
