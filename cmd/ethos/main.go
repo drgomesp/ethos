@@ -12,9 +12,14 @@ import (
 )
 
 func init() {
-	// UNIX Time is faster and smaller than most timestamps
 	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Caller().Logger()
+
+	if loadedCfg, err := LoadConfigFromYaml(); err != nil {
+		log.Fatal().Err(err).Msg("failed to load config file (ethos.yaml)")
+	} else {
+		ethoscli.Config = loadedCfg
+	}
 }
 
 func main() {
@@ -22,6 +27,14 @@ func main() {
 		Name:  "greet",
 		Usage: "fight the loneliness!",
 		Commands: []*cli.Command{
+			{
+				Name:    "build",
+				Aliases: []string{"b"},
+				Usage:   "Build your Solitidy contract source files",
+				Action: func(ctx *cli.Context) error {
+					return ethoscli.Build(context.Background())
+				},
+			},
 			{
 				Name:    "chain",
 				Aliases: []string{"c"},
@@ -33,15 +46,8 @@ func main() {
 			{
 				Name:    "test",
 				Aliases: []string{"t"},
-				Usage:   "start with the shenanigans...",
+				Usage:   "Some shenanigans...",
 				Action: func(ctx *cli.Context) error {
-					cfg, err := LoadConfigFromYaml()
-					if err != nil {
-						return err
-					}
-
-					ethoscli.TestConfig = cfg
-
 					return ethoscli.Test(context.Background())
 				},
 			},
@@ -54,17 +60,17 @@ func main() {
 	}
 }
 
-func LoadConfigFromYaml() (ethoscli.EthosConfig, error) {
+func LoadConfigFromYaml() (*ethoscli.EthosConfig, error) {
 	f, err := ioutil.ReadFile("./ethos.yaml")
 	if err != nil {
-		return ethoscli.NilConfig, err
+		return nil, err
 	}
 
 	var cfg ethoscli.EthosConfig
 	err = yaml.Unmarshal(f, &cfg)
 	if err != nil {
-		return ethoscli.NilConfig, err
+		return nil, err
 	}
 
-	return cfg, nil
+	return &cfg, nil
 }

@@ -12,7 +12,6 @@ tasks:
       - solc --version
       - abigen --version
       - echo 'Environment ready!'
-    silent: false
 
   build:
     dir: ./cmd/ethos
