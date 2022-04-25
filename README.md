@@ -1,13 +1,13 @@
 # 🛠 Ethos
 > An agency-increasing toolkit for Ethereum developers.
 
-## Features
+## 💡 Features
 
 - Managed `geth` node capable of connecting to 
   most networks available
 - Usage of Ethereum `devtools` in an easy way  
 
-## Dependencies
+## ⚙️ Dependencies
 
 To use Ethos, the following tools are **required**:
 
@@ -32,5 +32,5 @@ npm install -g solc
 
 ---
 
-[1]: https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html
-[2]: (https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html)
+[1]: https://taskfile.dev/#/installation
+[2]: https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html
