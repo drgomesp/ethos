@@ -29,15 +29,23 @@ func Build(ctx context.Context) error {
 		return err
 	}
 
+	if err := os.MkdirAll(filepath.Join(Config.BuildDir, "gen", "go"), fs.ModePerm); err != nil {
+		return err
+	}
+
 	stdout := bufio.NewWriter(new(bytes.Buffer))
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
 	err := filepath.Walk(
 		Config.ContractsDir,
-		func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
-			if !srcFileInfo.IsDir() {
-				return compileContract(srcFilePath, stdout, stderr)
+		func(srcFilePath string, contractFileInfo fs.FileInfo, srcErr error) error {
+			if !contractFileInfo.IsDir() {
+				if err := compileContract(srcFilePath, stdout, stderr); err != nil {
+					return err
+				}
+
+				return generateBindings(stdout, stderr, contractFileInfo.Name())
 			}
 
 			return nil
@@ -50,36 +58,32 @@ func Build(ctx context.Context) error {
 				return nil
 			}
 
+			if ext := filepath.Ext(genFileInfo.Name()); ext != ".sol" {
+				return nil
+			}
+
 			return filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
 				if srcFileInfo.IsDir() {
 					return nil
 				}
 
-				srcFileName := srcFileInfo.Name()
+				contractFileName := srcFileInfo.Name()
 				genFileExtension := filepath.Ext(genFileInfo.Name())
 
-				newFileName := fmt.Sprintf(
+				path := filepath.Join(Config.BuildDir, fmt.Sprintf(
 					"%s%s",
 					strings.TrimSuffix(
-						srcFileName,
-						filepath.Ext(srcFileName),
+						contractFileName,
+						filepath.Ext(contractFileName),
 					),
 					genFileExtension,
-				)
+				))
 
-				log.Debug().
-					Str("genFilePath", genFilePath).
-					Str("srcFilePath", srcFilePath).
-					Str("srcFileName", srcFileName).
-					Str("genFileExtension", genFileExtension).
-					Str("newFileName", newFileName).
-					Msg("")
-
-				log.Info().Msg("transformed file names")
+				log.Debug().Msg(path)
 
 				return os.Rename(
 					filepath.Join(Config.BuildDir, genFileInfo.Name()),
-					filepath.Join(Config.BuildDir, newFileName),
+					path,
 				)
 			})
 		})
@@ -87,6 +91,39 @@ func Build(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName string) error {
+	name := strings.TrimSuffix(contractFileName, filepath.Ext(contractFileName))
+
+	targetDir := filepath.Join(Config.BuildDir, "gen", "go")
+
+	cmd := exec.Command(
+		"abigen",
+		"--bin",
+		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.bin", name)),
+		"--abi",
+		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.abi", name)),
+		"--pkg=main",
+		fmt.Sprintf("--out=%s", filepath.Join(targetDir, fmt.Sprintf("%s.go", name))),
+	)
+
+	log.Trace().Msg(cmd.String())
+
+	output, err := cmd.Output()
+	if err != nil {
+		if len(output) > 0 {
+			log.Debug().Msg(string(output))
+		}
+
+		if d, e := ioutil.ReadAll(stderr); e == nil {
+			return errors.Wrap(err, string(d))
+		}
+	}
+
+	log.Info().Msg("contracts compiled successfully")
 
 	return nil
 }

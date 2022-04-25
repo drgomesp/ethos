@@ -28,6 +28,8 @@ an external compiler, which should ideally be either **solc** or **solcjs**.
 For the purpose of these instructions, the choice will be **solcjs**, which
 can be easily installed with `npm` by running: 
 
+3. #### [Abigen][3] 
+
 ```bash
 npm install -g solc
 ```
@@ -36,3 +38,4 @@ npm install -g solc
 
 [1]: https://taskfile.dev/#/installation
 [2]: https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html
+[3]:

@@ -16,10 +16,8 @@ import (
 	"time"
 )
 
-var TestConfig EthosConfig
-
 func Test(ctx context.Context) error {
-	client, err := ethclient.Dial(TestConfig.EndpointJsonRPC)
+	client, err := ethclient.Dial(Config.EndpointJsonRPC)
 	if err != nil {
 		log.Fatal().Err(err).Msg("rpc connection failed")
 	}
@@ -33,7 +31,7 @@ func Test(ctx context.Context) error {
 	go GetBlocksPeriodically(ctx, client)
 
 	var ws *ethclient.Client
-	ws, err = ethclient.Dial(TestConfig.EndpointWebSocket)
+	ws, err = ethclient.Dial(Config.EndpointWebSocket)
 	if err != nil {
 		log.Fatal().Err(err).Msg("websocket connection failed")
 	}
@@ -127,7 +125,7 @@ func DeployContract(
 
 	auth, err := bind.NewKeyedTransactorWithChainID(
 		privateKey,
-		big.NewInt(TestConfig.ChainID),
+		big.NewInt(Config.ChainID),
 	)
 	if err != nil {
 		return nil, err
