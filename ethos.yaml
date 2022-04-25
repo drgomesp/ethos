@@ -1,6 +1,6 @@
-compiler: solcjs
-contracts_dir: contracts
-build_dir: build
+compiler: solc
+contracts_dir: ./contracts
+build_dir: ./build
 chain_id: 80001
 endpoint_json_rpc: https://rpc-mumbai.maticvigil.com
 endpoint_web_socket: wss://ws-mumbai.matic.today

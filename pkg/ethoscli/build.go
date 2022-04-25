@@ -21,11 +21,6 @@ func Clean(ctx context.Context) error {
 }
 
 func Build(ctx context.Context) error {
-	_, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	if err := Clean(ctx); err != nil {
 		return err
 	}
@@ -38,52 +33,56 @@ func Build(ctx context.Context) error {
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
-	err = filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
-		if !srcFileInfo.IsDir() {
-			return compileContract(srcFilePath, stdout, stderr)
-		}
+	err := filepath.Walk(
+		Config.ContractsDir,
+		func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
+			if !srcFileInfo.IsDir() {
+				return compileContract(srcFilePath, stdout, stderr)
+			}
 
-		return nil
-	})
-
-	err = filepath.Walk(Config.BuildDir, func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
-		if genFileInfo.IsDir() {
 			return nil
-		}
+		})
 
-		return filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
-			if srcFileInfo.IsDir() {
+	err = filepath.Walk(
+		Config.BuildDir,
+		func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
+			if genFileInfo.IsDir() {
 				return nil
 			}
 
-			srcFileName := srcFileInfo.Name()
-			genFileExtension := filepath.Ext(genFileInfo.Name())
+			return filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
+				if srcFileInfo.IsDir() {
+					return nil
+				}
 
-			newFileName := fmt.Sprintf(
-				"%s%s",
-				strings.TrimSuffix(
-					srcFileName,
-					filepath.Ext(srcFileName),
-				),
-				genFileExtension,
-			)
+				srcFileName := srcFileInfo.Name()
+				genFileExtension := filepath.Ext(genFileInfo.Name())
 
-			log.Debug().
-				Str("genFilePath", genFilePath).
-				Str("srcFilePath", srcFilePath).
-				Str("srcFileName", srcFileName).
-				Str("genFileExtension", genFileExtension).
-				Str("newFileName", newFileName).
-				Msg("")
+				newFileName := fmt.Sprintf(
+					"%s%s",
+					strings.TrimSuffix(
+						srcFileName,
+						filepath.Ext(srcFileName),
+					),
+					genFileExtension,
+				)
 
-			log.Info().Msg("transformed file names")
+				log.Debug().
+					Str("genFilePath", genFilePath).
+					Str("srcFilePath", srcFilePath).
+					Str("srcFileName", srcFileName).
+					Str("genFileExtension", genFileExtension).
+					Str("newFileName", newFileName).
+					Msg("")
 
-			return os.Rename(
-				filepath.Join(Config.BuildDir, genFileInfo.Name()),
-				filepath.Join(Config.BuildDir, newFileName),
-			)
+				log.Info().Msg("transformed file names")
+
+				return os.Rename(
+					filepath.Join(Config.BuildDir, genFileInfo.Name()),
+					filepath.Join(Config.BuildDir, newFileName),
+				)
+			})
 		})
-	})
 
 	if err != nil {
 		return err
@@ -100,7 +99,6 @@ func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error 
 		path,
 		"--output-dir",
 		Config.BuildDir,
-		"-v",
 	)
 
 	cmd.Stderr = stderr
