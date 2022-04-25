@@ -93,14 +93,15 @@ func GetBalancePeriodically(
 			} else {
 				contractDeployed = true
 
-				instance, err := NewEthoscli(*addr, client)
-				if err != nil {
-					log.Fatal().Err(err).Msg("failed to instantiate contract")
-				}
-
-				log.Debug().
-					Interface("contract", instance).
-					Msg("contract instantiated")
+				_ = addr
+				//instance, err := NewEthoscli(*addr, client)
+				//if err != nil {
+				//	log.Fatal().Err(err).Msg("failed to instantiate contract")
+				//}
+				//
+				//log.Debug().
+				//	Interface("contract", instance).
+				//	Msg("contract instantiated")
 			}
 		}
 	}
@@ -137,7 +138,7 @@ func DeployContract(
 	auth.GasPrice = gasPrice
 
 	var address common.Address
-	address, tx, _, err := DeployEthoscli(auth, rpc)
+	address, tx, _, err := DeployMyContract2(auth, rpc)
 	if err != nil {
 		return nil, err
 	}

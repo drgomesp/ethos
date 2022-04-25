@@ -38,9 +38,8 @@ func Build(ctx context.Context) error {
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
-	info := buildInfo{
-		contracts: make(map[string]map[string]string, 0),
-	}
+	info := new(buildInfo)
+	info.contracts = map[string]map[string]string{}
 
 	// TODO: try deleting ./contracts/ and see this breaking
 	err := filepath.Walk(
@@ -51,7 +50,15 @@ func Build(ctx context.Context) error {
 					return err
 				}
 
-				info.contracts[contractFileInfo.Name()] = make(map[string]string)
+				name := strings.TrimSuffix(
+					contractFileInfo.Name(),
+					filepath.Ext(contractFileInfo.Name()),
+				)
+
+				info.contracts[contractFileInfo.Name()] = map[string]string{
+					".abi": filepath.Join(Config.BuildDir, fmt.Sprintf("%s.abi", name)),
+					".bin": filepath.Join(Config.BuildDir, fmt.Sprintf("%s.bin", name)),
+				}
 
 				return generateBindings(stdout, stderr, contractFileInfo.Name())
 			}
@@ -59,14 +66,14 @@ func Build(ctx context.Context) error {
 			return nil
 		})
 
-	err = filepath.Walk(
-		Config.BuildDir,
-		func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
-			if genFileInfo.IsDir() {
-				return nil
-			}
+	err = filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
+		if srcFileInfo.IsDir() {
+			return nil
+		}
 
-			return filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
+		return filepath.Walk(
+			Config.BuildDir,
+			func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
 				if srcFileInfo.IsDir() {
 					return nil
 				}
@@ -83,20 +90,17 @@ func Build(ctx context.Context) error {
 					genFileExtension,
 				))
 
-				info.contracts[contractFileName][genFileExtension] = path
-
-				log.Debug().Msg(path)
-
-				if ext := filepath.Ext(genFileInfo.Name()); ext != ".sol" {
+				if ext := filepath.Ext(srcFileInfo.Name()); ext != ".sol" {
 					return os.Rename(
-						filepath.Join(Config.BuildDir, genFileInfo.Name()),
+						filepath.Join(Config.BuildDir, srcFileInfo.Name()),
 						path,
 					)
 				}
 
 				return nil
 			})
-		})
+
+	})
 
 	if err != nil {
 		return err
@@ -107,12 +111,12 @@ func Build(ctx context.Context) error {
 	return nil
 }
 
-func displayInfo(info buildInfo) {
+func displayInfo(info *buildInfo) {
 	table := simpletable.New()
 
 	table.Header = &simpletable.Header{
 		Cells: []*simpletable.Cell{
-			{Align: simpletable.AlignCenter, Text: "contract"},
+			{Align: simpletable.AlignCenter, Text: "src"},
 			{Align: simpletable.AlignCenter, Text: "abi"},
 			{Align: simpletable.AlignCenter, Text: "bin"},
 		},
@@ -137,11 +141,13 @@ func displayInfo(info buildInfo) {
 
 	table.SetStyle(simpletable.StyleDefault)
 	fmt.Println(table.String())
+
+	log.Info().Msg("contracts compiled")
 }
 
 func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName string) error {
 	name := strings.TrimSuffix(contractFileName, filepath.Ext(contractFileName))
-	out := filepath.Join(Config.ContractBindingsDir, fmt.Sprintf("%s.go", name))
+	out := filepath.Join(Config.ContractBindingsDir, strings.ToLower(fmt.Sprintf("%s.go", name)))
 
 	cmd := exec.Command(
 		"abigen",
@@ -150,23 +156,22 @@ func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName s
 		"--abi",
 		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.abi", name)),
 		fmt.Sprintf("--pkg=%s", Config.ContractsBindingsPkg),
+		fmt.Sprintf("--type=%s", name),
 		fmt.Sprintf("--out=%s", out),
 	)
 
-	log.Trace().Msg(cmd.String())
+	log.Trace().Str("cmd", cmd.String()).Msg("executing command")
 
 	output, err := cmd.Output()
 	if err != nil {
 		if len(output) > 0 {
-			log.Debug().Msg(string(output))
+			log.Trace().Msg(string(output))
 		}
 
 		if d, e := ioutil.ReadAll(stderr); e == nil {
 			return errors.Wrap(err, string(d))
 		}
 	}
-
-	log.Info().Msg("contracts compiled successfully")
 
 	return nil
 }
@@ -186,15 +191,13 @@ func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error 
 	output, err := cmd.Output()
 	if err != nil {
 		if len(output) > 0 {
-			log.Debug().Msg(string(output))
+			log.Trace().Msg(string(output))
 		}
 
 		if d, e := ioutil.ReadAll(stderr); e == nil {
 			return errors.Wrap(err, string(d))
 		}
 	}
-
-	log.Info().Msg("contracts compiled successfully")
 
 	return nil
 }
