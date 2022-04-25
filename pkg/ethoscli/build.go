@@ -40,14 +40,16 @@ func Build(ctx context.Context) error {
 
 	info := new(buildInfo)
 	info.contracts = map[string]map[string]string{}
+	var err error
 
 	// TODO: try deleting ./contracts/ and see this breaking
-	err := filepath.Walk(
+	err = filepath.Walk(
 		Config.ContractsDir,
 		func(srcFilePath string, contractFileInfo fs.FileInfo, srcErr error) error {
 			if !contractFileInfo.IsDir() {
-				if err := compileContract(srcFilePath, stdout, stderr); err != nil {
-					return err
+				if e := compileContract(srcFilePath, stdout, stderr); e != nil {
+					err = e
+					return e
 				}
 
 				name := strings.TrimSuffix(
@@ -65,6 +67,10 @@ func Build(ctx context.Context) error {
 
 			return nil
 		})
+
+	if err != nil {
+		return err
+	}
 
 	err = filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
 		if srcFileInfo.IsDir() {
@@ -145,6 +151,32 @@ func displayInfo(info *buildInfo) {
 	log.Info().Msg("contracts compiled")
 }
 
+func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error {
+	cmd := exec.Command(
+		Config.Compiler,
+		"--abi",
+		"--bin",
+		path,
+		"--output-dir",
+		Config.BuildDir,
+	)
+
+	cmd.Stderr = stderr
+
+	output, err := cmd.Output()
+	if err != nil {
+		if len(output) > 0 {
+			log.Trace().Msg(string(output))
+		}
+
+		if d, e := ioutil.ReadAll(stderr); e == nil {
+			return errors.Wrap(err, string(d))
+		}
+	}
+
+	return nil
+}
+
 func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName string) error {
 	name := strings.TrimSuffix(contractFileName, filepath.Ext(contractFileName))
 	out := filepath.Join(Config.ContractBindingsDir, strings.ToLower(fmt.Sprintf("%s.go", name)))
@@ -161,32 +193,6 @@ func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName s
 	)
 
 	log.Trace().Str("cmd", cmd.String()).Msg("executing command")
-
-	output, err := cmd.Output()
-	if err != nil {
-		if len(output) > 0 {
-			log.Trace().Msg(string(output))
-		}
-
-		if d, e := ioutil.ReadAll(stderr); e == nil {
-			return errors.Wrap(err, string(d))
-		}
-	}
-
-	return nil
-}
-
-func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error {
-	cmd := exec.Command(
-		Config.Compiler,
-		"--abi",
-		"--bin",
-		path,
-		"--output-dir",
-		Config.BuildDir,
-	)
-
-	cmd.Stderr = stderr
 
 	output, err := cmd.Output()
 	if err != nil {
