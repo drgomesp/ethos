@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/alexeyco/simpletable"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
@@ -15,6 +16,10 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+type buildInfo struct {
+	contracts map[string]map[string]string
+}
 
 func Clean(ctx context.Context) error {
 	return os.RemoveAll(Config.BuildDir)
@@ -33,6 +38,10 @@ func Build(ctx context.Context) error {
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
+	info := buildInfo{
+		contracts: make(map[string]map[string]string, 0),
+	}
+
 	// TODO: try deleting ./contracts/ and see this breaking
 	err := filepath.Walk(
 		Config.ContractsDir,
@@ -41,6 +50,8 @@ func Build(ctx context.Context) error {
 				if err := compileContract(srcFilePath, stdout, stderr); err != nil {
 					return err
 				}
+
+				info.contracts[contractFileInfo.Name()] = make(map[string]string)
 
 				return generateBindings(stdout, stderr, contractFileInfo.Name())
 			}
@@ -52,10 +63,6 @@ func Build(ctx context.Context) error {
 		Config.BuildDir,
 		func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
 			if genFileInfo.IsDir() {
-				return nil
-			}
-
-			if ext := filepath.Ext(genFileInfo.Name()); ext != ".sol" {
 				return nil
 			}
 
@@ -76,12 +83,18 @@ func Build(ctx context.Context) error {
 					genFileExtension,
 				))
 
+				info.contracts[contractFileName][genFileExtension] = path
+
 				log.Debug().Msg(path)
 
-				return os.Rename(
-					filepath.Join(Config.BuildDir, genFileInfo.Name()),
-					path,
-				)
+				if ext := filepath.Ext(genFileInfo.Name()); ext != ".sol" {
+					return os.Rename(
+						filepath.Join(Config.BuildDir, genFileInfo.Name()),
+						path,
+					)
+				}
+
+				return nil
 			})
 		})
 
@@ -89,7 +102,41 @@ func Build(ctx context.Context) error {
 		return err
 	}
 
+	displayInfo(info)
+
 	return nil
+}
+
+func displayInfo(info buildInfo) {
+	table := simpletable.New()
+
+	table.Header = &simpletable.Header{
+		Cells: []*simpletable.Cell{
+			{Align: simpletable.AlignCenter, Text: "contract"},
+			{Align: simpletable.AlignCenter, Text: "abi"},
+			{Align: simpletable.AlignCenter, Text: "bin"},
+		},
+	}
+
+	for name, paths := range info.contracts {
+		r := []*simpletable.Cell{
+			{Text: name},
+		}
+
+		for _, path := range paths {
+			r = append(
+				r,
+				&simpletable.Cell{
+					Text: path,
+				},
+			)
+		}
+
+		table.Body.Cells = append(table.Body.Cells, r)
+	}
+
+	table.SetStyle(simpletable.StyleDefault)
+	fmt.Println(table.String())
 }
 
 func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName string) error {
