@@ -32,7 +32,7 @@ func main() {
 			{
 				Name:    "build",
 				Aliases: []string{"b"},
-				Usage:   "Build your Solitidy contract source files",
+				Usage:   "Build your Solidity contract source files",
 				Action: func(ctx *cli.Context) error {
 					MustLoadConfig()
 					return ethoscli.Build(context.Background())

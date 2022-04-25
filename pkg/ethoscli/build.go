@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func Clean(ctx context.Context) error {
@@ -36,23 +38,51 @@ func Build(ctx context.Context) error {
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
-	err = filepath.Walk(Config.ContractsDir, func(path string, info fs.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-
-		if err != nil {
-			return err
-		}
-
-		var cfg = Config
-		_ = cfg
-		err = compileContract(path, stdout, stderr)
-		if err != nil {
-			return err
+	err = filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
+		if !srcFileInfo.IsDir() {
+			return compileContract(srcFilePath, stdout, stderr)
 		}
 
 		return nil
+	})
+
+	err = filepath.Walk(Config.BuildDir, func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
+		if genFileInfo.IsDir() {
+			return nil
+		}
+
+		return filepath.Walk(Config.ContractsDir, func(srcFilePath string, srcFileInfo fs.FileInfo, srcErr error) error {
+			if srcFileInfo.IsDir() {
+				return nil
+			}
+
+			srcFileName := srcFileInfo.Name()
+			genFileExtension := filepath.Ext(genFileInfo.Name())
+
+			newFileName := fmt.Sprintf(
+				"%s%s",
+				strings.TrimSuffix(
+					srcFileName,
+					filepath.Ext(srcFileName),
+				),
+				genFileExtension,
+			)
+
+			log.Debug().
+				Str("genFilePath", genFilePath).
+				Str("srcFilePath", srcFilePath).
+				Str("srcFileName", srcFileName).
+				Str("genFileExtension", genFileExtension).
+				Str("newFileName", newFileName).
+				Msg("")
+
+			log.Info().Msg("transformed file names")
+
+			return os.Rename(
+				filepath.Join(Config.BuildDir, genFileInfo.Name()),
+				filepath.Join(Config.BuildDir, newFileName),
+			)
+		})
 	})
 
 	if err != nil {
@@ -87,6 +117,6 @@ func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error 
 	}
 
 	log.Info().Msg("contracts compiled successfully")
-	
+
 	return nil
 }
