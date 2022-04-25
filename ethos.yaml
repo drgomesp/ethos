@@ -1,3 +1,4 @@
+compiler: solcjs
 contracts_dir: ./contracts
 build_dir: ./build
 chain_id: 80001

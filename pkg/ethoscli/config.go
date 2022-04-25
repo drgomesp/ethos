@@ -5,6 +5,7 @@ var Config = DefaultEthosConfig()
 const EthosFile = "ethos.yaml"
 
 type EthosConfig struct {
+	Compiler          string `yaml:"compiler"`
 	ContractsDir      string `yaml:"contracts_dir"`
 	BuildDir          string `yaml:"build_dir"`
 	ChainID           int64  `yaml:"chain_id"`
@@ -14,6 +15,7 @@ type EthosConfig struct {
 
 func DefaultEthosConfig() *EthosConfig {
 	return &EthosConfig{
+		Compiler:          "solcjs",
 		ContractsDir:      "./contracts",
 		BuildDir:          "./build",
 		ChainID:           1337,
