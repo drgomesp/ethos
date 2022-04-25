@@ -29,14 +29,11 @@ func Build(ctx context.Context) error {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Join(Config.BuildDir, "gen", "go"), fs.ModePerm); err != nil {
-		return err
-	}
-
 	stdout := bufio.NewWriter(new(bytes.Buffer))
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
+	// TODO: try deleting ./contracts/ and see this breaking
 	err := filepath.Walk(
 		Config.ContractsDir,
 		func(srcFilePath string, contractFileInfo fs.FileInfo, srcErr error) error {
@@ -97,8 +94,7 @@ func Build(ctx context.Context) error {
 
 func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName string) error {
 	name := strings.TrimSuffix(contractFileName, filepath.Ext(contractFileName))
-
-	targetDir := filepath.Join(Config.BuildDir, "gen", "go")
+	out := filepath.Join(Config.ContractBindingsDir, fmt.Sprintf("%s.go", name))
 
 	cmd := exec.Command(
 		"abigen",
@@ -106,8 +102,8 @@ func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName s
 		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.bin", name)),
 		"--abi",
 		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.abi", name)),
-		"--pkg=main",
-		fmt.Sprintf("--out=%s", filepath.Join(targetDir, fmt.Sprintf("%s.go", name))),
+		fmt.Sprintf("--pkg=%s", Config.ContractsBindingsPkg),
+		fmt.Sprintf("--out=%s", out),
 	)
 
 	log.Trace().Msg(cmd.String())

@@ -5,8 +5,10 @@
 
 compiler: solc
 contracts_dir: ./contracts
+contracts_bindings_dir: ./pkg/ethoscli
+contracts_bindings_pkg: ethoscli
 build_dir: ./build
-chain_id: 80001
+chain_id: 4
 #endpoint_json_rpc: https://rpc-mumbai.maticvigil.com
 #endpoint_web_socket: wss://ws-mumbai.matic.today
 endpoint_json_rpc: http://localhost:8545
