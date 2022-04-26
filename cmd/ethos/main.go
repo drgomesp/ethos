@@ -16,7 +16,7 @@ var Build string
 
 func init() {
 	zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Caller().Logger()
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
 func main() {
@@ -76,25 +76,14 @@ func main() {
 	}
 }
 
-func LoadConfigFromYaml() (*ethoscli.EthosConfig, error) {
+func MustLoadConfig() {
 	f, err := ioutil.ReadFile("./ethos.yaml")
 	if err != nil {
-		return nil, err
+		log.Fatal().Err(err).Msg("failed to load config")
 	}
 
-	var cfg ethoscli.EthosConfig
-	err = yaml.Unmarshal(f, &cfg)
+	err = yaml.Unmarshal(f, &ethoscli.Config)
 	if err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-func MustLoadConfig() {
-	if loadedCfg, err := LoadConfigFromYaml(); err != nil {
-		log.Fatal().Err(err).Msg("failed to load config file (ethos.yaml)")
-	} else {
-		ethoscli.Config = loadedCfg
+		log.Fatal().Err(err).Msg("failed to parse config")
 	}
 }
