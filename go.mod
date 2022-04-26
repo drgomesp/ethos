@@ -3,6 +3,7 @@ module github.com/drgomesp/ethos
 go 1.18
 
 require (
+	github.com/alexeyco/simpletable v1.0.0
 	github.com/ethereum/go-ethereum v1.10.17
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
-	github.com/alexeyco/simpletable v1.0.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.1.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect

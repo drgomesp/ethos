@@ -9,10 +9,19 @@ tasks:
       - echo 'Environment ready!'
 
   build:
-    dir: ./cmd/ethos
+    vars:
+      GOPATH:
+        sh: echo $GOPATH
+      VERSION:
+        sh: git describe --tags --always
+      BUILD:
+        sh: git rev-parse --short HEAD
+      LDFLAGS: -ldflags "-X main.Version={{.VERSION}} -X main.Build={{.BUILD}}"
     cmds:
       - echo 'Building...'
-      - go build
-      - go install
-      - echo 'Done. `ethos` command is now available in $GOPATH/bin ('$GOPATH'/bin)'
-    silent: true
+      - go build -o ./build/ethos {{.LDFLAGS}} ./cmd/ethos/*.go
+#     TODO: check why `go install` doesn't carry build flags
+#      - go install ./cmd/ethos/*.go
+      - cp ./build/ethos {{.GOPATH}}/bin
+      - echo 'Done. `ethos` command is now available in $GOPATH/bin'
+    silent: false

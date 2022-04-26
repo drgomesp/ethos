@@ -11,12 +11,23 @@ import (
 	"os"
 )
 
+var Version string
+var Build string
+
 func init() {
-	zerolog.SetGlobalLevel(ethoscli.Config.LogLevel)
+	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Caller().Logger()
 }
 
 func main() {
+	if Version != "" {
+		log.Info().Msgf("build.Version: %s\t", Version)
+	}
+
+	if Build != "" {
+		log.Info().Msgf("build.Build: %s\t", Build)
+	}
+
 	app := &cli.App{
 		Name:  "greet",
 		Usage: "fight the loneliness!",
