@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/alexeyco/simpletable"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
@@ -53,19 +52,19 @@ func Build(ctx context.Context) error {
 				}
 
 				basePath := filepath.Dir(srcFilePath)
-
 				name := strings.TrimSuffix(
 					contractFileInfo.Name(),
 					filepath.Ext(contractFileInfo.Name()),
 				)
+				path := filepath.Join(Config.BuildDir, basePath)
 
-				info.contracts[contractFileInfo.Name()] = map[string]string{
-					".abi": filepath.Join(Config.BuildDir, basePath, fmt.Sprintf("%s.abi", name)),
-					".bin": filepath.Join(Config.BuildDir, basePath, fmt.Sprintf("%s.bin", name)),
+				info.contracts[srcFilePath] = map[string]string{
+					".abi": filepath.Join(path, fmt.Sprintf("%s.abi", name)),
+					".bin": filepath.Join(path, fmt.Sprintf("%s.bin", name)),
 				}
 
 				log.Debug().
-					Interface("contract", info.contracts[contractFileInfo.Name()]).
+					Interface("contract", info.contracts[srcFilePath]).
 					Msg("done")
 
 				return nil
@@ -100,7 +99,7 @@ func Build(ctx context.Context) error {
 				genFileExtension,
 			))
 
-			genFiles := info.contracts[srcFileInfo.Name()]
+			genFiles := info.contracts[srcFilePath]
 			basePath := filepath.Dir(genFiles[".abi"])
 
 			ext := filepath.Ext(srcFileInfo.Name())
@@ -132,40 +131,6 @@ func Build(ctx context.Context) error {
 	displayInfo(info)
 
 	return nil
-}
-
-func displayInfo(info *buildInfo) {
-	table := simpletable.New()
-
-	table.Header = &simpletable.Header{
-		Cells: []*simpletable.Cell{
-			{Align: simpletable.AlignCenter, Text: "src"},
-			{Align: simpletable.AlignCenter, Text: "abi"},
-			{Align: simpletable.AlignCenter, Text: "bin"},
-		},
-	}
-
-	for name, paths := range info.contracts {
-		r := []*simpletable.Cell{
-			{Text: name},
-		}
-
-		for _, path := range paths {
-			r = append(
-				r,
-				&simpletable.Cell{
-					Text: path,
-				},
-			)
-		}
-
-		table.Body.Cells = append(table.Body.Cells, r)
-	}
-
-	table.SetStyle(simpletable.StyleDefault)
-	fmt.Println(table.String())
-
-	log.Info().Msg("contracts compiled successfully")
 }
 
 func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error {
@@ -214,6 +179,24 @@ func generateBindings(basePath string, contractFileName string) error {
 	basePath = filepath.Join(Config.BuildDir, basePath)
 	binPath := filepath.Join(basePath, fmt.Sprintf("%s.bin", name))
 	abiPath := filepath.Join(basePath, fmt.Sprintf("%s.abi", name))
+
+	if _, err := os.Stat(binPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			log.Warn().Msg(err.Error())
+			return nil
+		} else {
+			return err
+		}
+	}
+
+	if _, err := os.Stat(abiPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			log.Warn().Msg(err.Error())
+			return nil
+		} else {
+			return err
+		}
+	}
 
 	cmd := exec.Command(
 		"abigen",
