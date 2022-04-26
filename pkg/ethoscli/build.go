@@ -38,19 +38,21 @@ func Build(ctx context.Context) error {
 	buf := new(bytes.Buffer)
 	stderr := bufio.NewReadWriter(bufio.NewReader(buf), bufio.NewWriter(buf))
 
-	info := new(buildInfo)
-	info.contracts = map[string]map[string]string{}
-	var err error
+	info := &buildInfo{
+		map[string]map[string]string{},
+	}
 
-	// TODO: try deleting ./contracts/ and see this breaking
+	var err error
 	err = filepath.Walk(
+		// TODO: try deleting ./contracts/ and see this breaking
 		Config.ContractsDir,
 		func(srcFilePath string, contractFileInfo fs.FileInfo, srcErr error) error {
 			if !contractFileInfo.IsDir() && filepath.Ext(contractFileInfo.Name()) == ".sol" {
-				if e := compileContract(srcFilePath, stdout, stderr); e != nil {
-					err = e
-					return e
+				if err = compileContract(srcFilePath, stdout, stderr); err != nil {
+					return err
 				}
+
+				basePath := filepath.Dir(srcFilePath)
 
 				name := strings.TrimSuffix(
 					contractFileInfo.Name(),
@@ -58,11 +60,15 @@ func Build(ctx context.Context) error {
 				)
 
 				info.contracts[contractFileInfo.Name()] = map[string]string{
-					".abi": filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.abi", name)),
-					".bin": filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.bin", name)),
+					".abi": filepath.Join(Config.BuildDir, basePath, fmt.Sprintf("%s.abi", name)),
+					".bin": filepath.Join(Config.BuildDir, basePath, fmt.Sprintf("%s.bin", name)),
 				}
 
-				return generateBindings(stdout, stderr, contractFileInfo.Name())
+				log.Debug().
+					Interface("contract", info.contracts[contractFileInfo.Name()]).
+					Msg("done")
+
+				return nil
 			}
 
 			return nil
@@ -94,16 +100,29 @@ func Build(ctx context.Context) error {
 				genFileExtension,
 			))
 
-			if ext := filepath.Ext(srcFileInfo.Name()); ext != ".sol" {
-				return os.Rename(
-					filepath.Join(Config.BuildDir, srcFileInfo.Name()),
+			genFiles := info.contracts[srcFileInfo.Name()]
+			basePath := filepath.Dir(genFiles[".abi"])
+
+			ext := filepath.Ext(srcFileInfo.Name())
+			if ext == ".bin" || ext == ".abi" {
+				if err = os.Rename(
+					filepath.Join(basePath, srcFileInfo.Name()),
 					path,
-				)
+				); err != nil {
+					return err
+				}
 			}
 
 			return nil
 		})
+	})
 
+	err = filepath.Walk(Config.ContractsDir, func(path string, info fs.FileInfo, err error) error {
+		if !info.IsDir() && filepath.Ext(info.Name()) == ".sol" {
+			return generateBindings(path, info.Name())
+		}
+
+		return nil
 	})
 
 	if err != nil {
@@ -150,52 +169,64 @@ func displayInfo(info *buildInfo) {
 }
 
 func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error {
+	targetPath := filepath.Join(
+		Config.BuildDir,
+		filepath.Dir(path),
+	)
+
 	cmd := exec.Command(
 		Config.Compiler,
 		"--abi",
 		"--bin",
 		path,
 		"--output-dir",
-		filepath.Join(Config.BuildDir, Config.ContractsDir),
+		targetPath,
 		"--overwrite",
+		"--ignore-missing",
 	)
 
+	log.Trace().Str("cmd", cmd.String()).Msg("compiling")
 	cmd.Stderr = stderr
 
 	output, err := cmd.Output()
 	if err != nil {
-		if len(output) > 0 {
-			log.Trace().Msg(string(output))
-		}
-
 		if d, e := ioutil.ReadAll(stderr); e == nil {
 			return errors.Wrap(err, string(d))
 		}
 	}
 
+	if len(output) > 0 {
+		log.Trace().Msg(string(output))
+	}
+
 	return nil
 }
 
-func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName string) error {
+func generateBindings(basePath string, contractFileName string) error {
 	name := strings.TrimSuffix(contractFileName, filepath.Ext(contractFileName))
+	basePath = strings.TrimSuffix(basePath, contractFileName)
 	out := filepath.Join(Config.ContractBindingsDir, strings.ToLower(fmt.Sprintf("%s.go", name)))
 
 	if err := os.MkdirAll(Config.ContractBindingsDir, fs.ModePerm); err != nil {
 		panic(err)
 	}
 
+	basePath = filepath.Join(Config.BuildDir, basePath)
+	binPath := filepath.Join(basePath, fmt.Sprintf("%s.bin", name))
+	abiPath := filepath.Join(basePath, fmt.Sprintf("%s.abi", name))
+
 	cmd := exec.Command(
 		"abigen",
 		"--bin",
-		filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.bin", name)),
+		binPath,
 		"--abi",
-		filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.abi", name)),
+		abiPath,
 		fmt.Sprintf("--pkg=%s", Config.ContractsBindingsPkg),
 		fmt.Sprintf("--type=%s", name),
 		fmt.Sprintf("--out=%s", out),
 	)
 
-	log.Trace().Str("cmd", cmd.String()).Msg("compiling ")
+	log.Trace().Str("cmd", cmd.String()).Msg("generating bindings")
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -203,9 +234,11 @@ func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName s
 			log.Trace().Msg(string(output))
 		}
 
-		if d, e := ioutil.ReadAll(stderr); e == nil {
-			return errors.Wrap(err, string(d))
-		}
+		return err
+
+		//if d, e := ioutil.ReadAll(stderr); e == nil {
+		//	return errors.Wrap(err, string(d))
+		//}
 	}
 
 	return nil

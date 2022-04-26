@@ -17,7 +17,7 @@ type EthosConfig struct {
 
 func DefaultEthosConfig() *EthosConfig {
 	return &EthosConfig{
-		Compiler:             "solcjs",
+		Compiler:             "solc",
 		ContractsDir:         "./contracts",
 		ContractBindingsDir:  "./pkg/contracts",
 		ContractsBindingsPkg: "main",
