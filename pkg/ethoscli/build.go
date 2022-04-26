@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/drgomesp/ethos/pkg/ethereum"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"io"
@@ -41,22 +43,48 @@ func Build(ctx context.Context) error {
 		map[string]map[string]string{},
 	}
 
+	compilerOptions := ethereum.CompilerOptions{
+		Language: "Solidity",
+		Sources:  map[string]ethereum.CompilerSource{},
+		Settings: ethereum.CompilerSettings{
+			EVMVersion: "istanbul",
+			Optimizer: ethereum.OptimizerOptions{
+				Enabled: false,
+			},
+			OutputSelection: map[string]map[string][]string{
+				"*": {
+					"*": []string{
+						"abi",
+						"metadata",
+						"evm.bytecode",
+					},
+				},
+			},
+		},
+	}
+
 	var err error
 	err = filepath.Walk(
 		// TODO: try deleting ./contracts/ and see this breaking
 		Config.ContractsDir,
 		func(srcFilePath string, contractFileInfo fs.FileInfo, srcErr error) error {
 			if !contractFileInfo.IsDir() && filepath.Ext(contractFileInfo.Name()) == ".sol" {
-				if err = compileContract(srcFilePath, stdout, stderr); err != nil {
-					return err
-				}
+				//if err = compileContract(compilerOptions, contractFileInfo.Name(), srcFilePath, stdout,
+				//	stderr); err != nil {
+				//	return err
+				//}
 
-				basePath := filepath.Dir(srcFilePath)
+				basePath := strings.TrimPrefix(strings.TrimPrefix(srcFilePath,
+					Config.ContractsDir), string(filepath.Separator))
 				name := strings.TrimSuffix(
 					contractFileInfo.Name(),
 					filepath.Ext(contractFileInfo.Name()),
 				)
 				path := filepath.Join(Config.BuildDir, basePath)
+
+				compilerOptions.Sources[basePath] = ethereum.CompilerSource{
+					URLs: []string{srcFilePath},
+				}
 
 				info.contracts[srcFilePath] = map[string]string{
 					".abi": filepath.Join(path, fmt.Sprintf("%s.abi", name)),
@@ -73,7 +101,7 @@ func Build(ctx context.Context) error {
 			return nil
 		})
 
-	if err != nil {
+	if err = compileContracts(compilerOptions, stdout, stderr); err != nil {
 		return err
 	}
 
@@ -133,22 +161,17 @@ func Build(ctx context.Context) error {
 	return nil
 }
 
-func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error {
-	targetPath := filepath.Join(
-		Config.BuildDir,
-		filepath.Dir(path),
-	)
+func compileContracts(opts ethereum.CompilerOptions, stdout io.Writer, stderr io.ReadWriter) error {
+	data, err := json.Marshal(opts)
+	if err != nil {
+		panic(err)
+	}
 
 	cmd := exec.Command(
 		Config.Compiler,
-		"--abi",
-		"--bin",
-		path,
-		"--output-dir",
-		targetPath,
-		"--overwrite",
-		"--ignore-missing",
+		"--standard-json",
 	)
+	cmd.Stdin = bytes.NewReader(data)
 
 	log.Trace().Str("cmd", cmd.String()).Msg("compiling")
 	cmd.Stderr = stderr
