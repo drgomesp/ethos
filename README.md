@@ -25,17 +25,27 @@ go install github.com/go-task/task/v3/cmd/task@latest
 For now, to build and compile Solidity source code we rely on
 an external compiler, which should ideally be either **solc** or **solcjs**.
 
-For the purpose of these instructions, the choice will be **solcjs**, which
-can be easily installed with `npm` by running: 
+For the purpose of these instructions, the choice will be **solc** (in this
+case, under a system running Ubuntu):
+
+```
+sudo add-apt-repository ppa:ethereum/ethereum
+sudo apt-get update
+sudo apt-get install solc
+```
 
 3. #### [Abigen][3] 
 
+This tool is part of the Ethereum devtools package. 
+
+If you have Go installed, this is as easy as running:
+
 ```bash
-npm install -g solc
+go install github.com/ethereum/go-ethereum/cmd/abigen
 ```
 
 ---
 
 [1]: https://taskfile.dev/#/installation
-[2]: https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html
+[2]: https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html#linux-packages
 [3]:
