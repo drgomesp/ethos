@@ -8,9 +8,13 @@ contracts_dir: ./contracts
 contracts_bindings_dir: ./pkg/contracts
 contracts_bindings_pkg: contracts
 build_dir: ./build
-#chain_id: 4 # rinkeby
+
+# Rinkeby
+#chain_id: 4
+#endpoint_json_rpc: http://localhost:8545
+#endpoint_web_socket: ws://localhost:8546
+
+# Polygon Mumbai
 chain_id: 80001 # polygon mumbai
 endpoint_json_rpc: https://rpc-mumbai.maticvigil.com
 endpoint_web_socket: wss://ws-mumbai.matic.today
-#endpoint_json_rpc: http://localhost:8545
-#endpoint_web_socket: ws://localhost:8546

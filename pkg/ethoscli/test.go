@@ -81,13 +81,13 @@ func GetBalancePeriodically(
 	for {
 		balance, err := client.BalanceAt(ctx, address, nil)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get balance")
+			log.Warn().Err(err).Msg("failed to get balance")
 		}
 
 		log.Debug().Int64("balance", balance.Int64()).Msg("getting account balance")
 		time.Sleep(5 * time.Second)
 
-		if !contractDeployed && balance.Int64() > 0 {
+		if !contractDeployed /*&& balance.Int64() > 0*/ {
 			var addr *common.Address
 			if addr, err = DeployContract(ctx, client, privateKey, publicKey); err != nil {
 				log.Error().Err(err).Msg("failed to deploy contract")
@@ -138,7 +138,7 @@ func DeployContract(
 	auth.GasPrice = gasPrice
 
 	var address common.Address
-	address, tx, _, err := contracts.DeployMyContract2(auth, rpc)
+	address, tx, _, err := contracts.DeployMyContract(auth, rpc)
 	if err != nil {
 		return nil, err
 	}
