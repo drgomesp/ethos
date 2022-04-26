@@ -28,7 +28,7 @@ an external compiler, which should ideally be either **solc** or **solcjs**.
 For the purpose of these instructions, the choice will be **solc** (in this
 case, under a system running Ubuntu):
 
-```
+```bash
 sudo add-apt-repository ppa:ethereum/ethereum
 sudo apt-get update
 sudo apt-get install solc
@@ -48,4 +48,4 @@ go install github.com/ethereum/go-ethereum/cmd/abigen
 
 [1]: https://taskfile.dev/#/installation
 [2]: https://docs.soliditylang.org/en/v0.8.13/installing-solidity.html#linux-packages
-[3]:
+[3]: https://geth.ethereum.org/docs/install-and-build/installing-geth
