@@ -4,9 +4,9 @@
 #   the examples/ directory.
 
 compiler: solc
-contracts_dir: ./contracts
-contracts_bindings_dir: ./pkg/contracts
-contracts_bindings_pkg: contracts
+contracts_dir: ./contracts/openzeppelin
+contracts_bindings_dir: ./pkg/contracts/openzeppelin
+contracts_bindings_pkg: openzeppelin
 build_dir: ./build
 
 # Local (Hardhat)

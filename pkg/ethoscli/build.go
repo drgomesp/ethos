@@ -46,7 +46,7 @@ func Build(ctx context.Context) error {
 	err = filepath.Walk(
 		Config.ContractsDir,
 		func(srcFilePath string, contractFileInfo fs.FileInfo, srcErr error) error {
-			if !contractFileInfo.IsDir() {
+			if !contractFileInfo.IsDir() && filepath.Ext(contractFileInfo.Name()) == ".sol" {
 				if e := compileContract(srcFilePath, stdout, stderr); e != nil {
 					err = e
 					return e
@@ -58,8 +58,8 @@ func Build(ctx context.Context) error {
 				)
 
 				info.contracts[contractFileInfo.Name()] = map[string]string{
-					".abi": filepath.Join(Config.BuildDir, fmt.Sprintf("%s.abi", name)),
-					".bin": filepath.Join(Config.BuildDir, fmt.Sprintf("%s.bin", name)),
+					".abi": filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.abi", name)),
+					".bin": filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.bin", name)),
 				}
 
 				return generateBindings(stdout, stderr, contractFileInfo.Name())
@@ -77,34 +77,32 @@ func Build(ctx context.Context) error {
 			return nil
 		}
 
-		return filepath.Walk(
-			Config.BuildDir,
-			func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
-				if srcFileInfo.IsDir() {
-					return nil
-				}
-
-				contractFileName := srcFileInfo.Name()
-				genFileExtension := filepath.Ext(genFileInfo.Name())
-
-				path := filepath.Join(Config.BuildDir, fmt.Sprintf(
-					"%s%s",
-					strings.TrimSuffix(
-						contractFileName,
-						filepath.Ext(contractFileName),
-					),
-					genFileExtension,
-				))
-
-				if ext := filepath.Ext(srcFileInfo.Name()); ext != ".sol" {
-					return os.Rename(
-						filepath.Join(Config.BuildDir, srcFileInfo.Name()),
-						path,
-					)
-				}
-
+		return filepath.Walk(Config.BuildDir, func(genFilePath string, genFileInfo fs.FileInfo, genErr error) error {
+			if srcFileInfo.IsDir() {
 				return nil
-			})
+			}
+
+			contractFileName := srcFileInfo.Name()
+			genFileExtension := filepath.Ext(genFileInfo.Name())
+
+			path := filepath.Join(Config.BuildDir, fmt.Sprintf(
+				"%s%s",
+				strings.TrimSuffix(
+					contractFileName,
+					filepath.Ext(contractFileName),
+				),
+				genFileExtension,
+			))
+
+			if ext := filepath.Ext(srcFileInfo.Name()); ext != ".sol" {
+				return os.Rename(
+					filepath.Join(Config.BuildDir, srcFileInfo.Name()),
+					path,
+				)
+			}
+
+			return nil
+		})
 
 	})
 
@@ -158,7 +156,8 @@ func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error 
 		"--bin",
 		path,
 		"--output-dir",
-		Config.BuildDir,
+		filepath.Join(Config.BuildDir, Config.ContractsDir),
+		"--overwrite",
 	)
 
 	cmd.Stderr = stderr
@@ -181,12 +180,16 @@ func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName s
 	name := strings.TrimSuffix(contractFileName, filepath.Ext(contractFileName))
 	out := filepath.Join(Config.ContractBindingsDir, strings.ToLower(fmt.Sprintf("%s.go", name)))
 
+	if err := os.MkdirAll(Config.ContractBindingsDir, fs.ModePerm); err != nil {
+		panic(err)
+	}
+
 	cmd := exec.Command(
 		"abigen",
 		"--bin",
-		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.bin", name)),
+		filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.bin", name)),
 		"--abi",
-		filepath.Join(Config.BuildDir, fmt.Sprintf("%s.abi", name)),
+		filepath.Join(Config.BuildDir, Config.ContractsDir, fmt.Sprintf("%s.abi", name)),
 		fmt.Sprintf("--pkg=%s", Config.ContractsBindingsPkg),
 		fmt.Sprintf("--type=%s", name),
 		fmt.Sprintf("--out=%s", out),
