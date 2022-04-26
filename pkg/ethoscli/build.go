@@ -148,7 +148,7 @@ func displayInfo(info *buildInfo) {
 	table.SetStyle(simpletable.StyleDefault)
 	fmt.Println(table.String())
 
-	log.Info().Msg("contracts compiled")
+	log.Info().Msg("contracts compiled successfully")
 }
 
 func compileContract(path string, stdout io.Writer, stderr io.ReadWriter) error {
@@ -192,7 +192,7 @@ func generateBindings(stdout io.Writer, stderr io.ReadWriter, contractFileName s
 		fmt.Sprintf("--out=%s", out),
 	)
 
-	log.Trace().Str("cmd", cmd.String()).Msg("executing command")
+	log.Trace().Str("cmd", cmd.String()).Msg("compiling ")
 
 	output, err := cmd.Output()
 	if err != nil {

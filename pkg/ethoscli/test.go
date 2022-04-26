@@ -133,8 +133,8 @@ func DeployContract(
 	}
 
 	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)     // in wei
-	auth.GasLimit = uint64(300000) // in units
+	auth.Value = big.NewInt(0)      // in wei
+	auth.GasLimit = uint64(6721975) // in units
 	auth.GasPrice = gasPrice
 
 	var address common.Address
