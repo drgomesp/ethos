@@ -3,12 +3,14 @@ version: '3'
 tasks:
 
   check:
+    desc: "Check if the dependencies are available"
     cmds:
       - solc --version
       - abigen --version
       - echo 'Environment ready!'
 
   build:
+    desc: "Builds an `ethos` project by compiling and deploying contracts"
     vars:
       GOPATH:
         sh: echo $GOPATH

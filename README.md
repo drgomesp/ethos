@@ -13,7 +13,7 @@
 
 ## 🪂 [Getting Started][5]
 
-### 🔩 Install the dependencies
+### Install the dependencies
 
 To use Ethos, the following tools are **required**:
 
@@ -41,10 +41,18 @@ If you have Go installed, this is as easy as running:
 go install github.com/ethereum/go-ethereum/cmd/abigen
 ```
 
-### 💻 Installing the `ethos` binary 
+### Install the `ethos` binary 
 
 ```bash
 go install github.com/drgomesp/ethos/cmd/ethos
+```
+
+You're now ready to work with Ethos.
+
+### Initialize `ethos` config
+
+```bash
+ethos init
 ```
 
 ## 👨‍🏭 [Contributing][6]
