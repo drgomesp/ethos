@@ -164,7 +164,7 @@ func Build(ctx context.Context) error {
 func compileContracts(opts ethereum.CompilerOptions, stdout io.Writer, stderr io.ReadWriter) error {
 	data, err := json.Marshal(opts)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	cmd := exec.Command(
@@ -173,19 +173,27 @@ func compileContracts(opts ethereum.CompilerOptions, stdout io.Writer, stderr io
 	)
 	cmd.Stdin = bytes.NewReader(data)
 
-	log.Trace().Str("cmd", cmd.String()).Msg("compiling")
-	cmd.Stderr = stderr
+	// open the out file for writing
+	outfile, err := os.Create("./compile.json")
+	if err != nil {
+		panic(err)
+	}
+	defer outfile.Close()
+	cmd.Stdout = outfile
 
-	output, err := cmd.Output()
+	log.Trace().Str("cmd", cmd.String()).Msg("compiling")
+	//cmd.Stderr = stderr
+
+	err = cmd.Run()
 	if err != nil {
 		if d, e := ioutil.ReadAll(stderr); e == nil {
 			return errors.Wrap(err, string(d))
 		}
 	}
 
-	if len(output) > 0 {
-		log.Trace().Msg(string(output))
-	}
+	//if len(output) > 0 {
+	//	log.Trace().Msg(string(output))
+	//}
 
 	return nil
 }
