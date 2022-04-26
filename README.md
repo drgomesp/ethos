@@ -2,7 +2,7 @@
 > <br /> Make sure to refresh every 5 minutes ;).
 
 # 🛠 Ethos
-> An agency-increasing toolkit for web3 developers.
+> An agency-increasing toolkit for Ethereum developers.
 
 ## 💡 Features
 

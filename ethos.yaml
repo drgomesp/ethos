@@ -5,8 +5,8 @@
 
 compiler: solc
 contracts_dir: ./contracts
-contracts_bindings_dir: ./pkg/ethoscli
-contracts_bindings_pkg: ethoscli
+contracts_bindings_dir: ./pkg/contracts
+contracts_bindings_pkg: contracts
 build_dir: ./build
 #chain_id: 4 # rinkeby
 chain_id: 80001 # polygon mumbai
