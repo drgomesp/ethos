@@ -1,4 +1,4 @@
-package ethoscli
+package task
 
 import (
 	"fmt"

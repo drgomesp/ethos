@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/drgomesp/ethos/pkg/ethoscli"
+	"github.com/drgomesp/ethos/pkg/task"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -37,7 +37,7 @@ func main() {
 				Aliases: []string{"i"},
 				Usage:   "Initialize the Ethos config file",
 				Action: func(ctx *cli.Context) error {
-					return ethoscli.Init(context.Background())
+					return task.Init(context.Background())
 				},
 			},
 			{
@@ -46,7 +46,7 @@ func main() {
 				Usage:   "Build your Solidity contract source files",
 				Action: func(ctx *cli.Context) error {
 					MustLoadConfig()
-					return ethoscli.Build(context.Background())
+					return task.Build(context.Background())
 				},
 			},
 			{
@@ -55,7 +55,7 @@ func main() {
 				Usage:   "Start a local Ethereum blockchain node",
 				Action: func(ctx *cli.Context) error {
 					MustLoadConfig()
-					return ethoscli.Chain(context.Background())
+					return task.Chain(context.Background())
 				},
 			},
 			{
@@ -64,7 +64,7 @@ func main() {
 				Usage:   "Some shenanigans...",
 				Action: func(ctx *cli.Context) error {
 					MustLoadConfig()
-					return ethoscli.Test(context.Background())
+					return task.Test(context.Background())
 				},
 			},
 		},
@@ -82,7 +82,7 @@ func MustLoadConfig() {
 		log.Fatal().Err(err).Msg("failed to load config")
 	}
 
-	err = yaml.Unmarshal(f, &ethoscli.Config)
+	err = yaml.Unmarshal(f, &task.Config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to parse config")
 	}

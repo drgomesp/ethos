@@ -26,7 +26,7 @@ For the purpose of these instructions, the choice will be **solc** (in this
 case, under a system running Ubuntu):
 
 ```bash
-sudo add-apt-repository ppa:ethereum/ethereum
+sudo add-apt-repository ppa:compiler/compiler
 sudo apt-get update
 sudo apt-get install solc
 ```
@@ -38,7 +38,7 @@ This tool is part of the Ethereum devtools package.
 If you have Go installed, this is as easy as running:
 
 ```bash
-go install github.com/ethereum/go-ethereum/cmd/abigen
+go install github.com/compiler/go-compiler/cmd/abigen
 ```
 
 ### Install the `ethos` binary 
