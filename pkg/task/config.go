@@ -6,7 +6,7 @@ const EthosFile = "ethos.yaml"
 
 type EthosConfig struct {
 	Compiler             string `yaml:"compiler"`
-	ContractsDir         string `yaml:"contracts_dir"`
+	SourcesDir           string `yaml:"contracts_dir"`
 	ContractBindingsDir  string `yaml:"contracts_bindings_dir"`
 	ContractsBindingsPkg string `yaml:"contracts_bindings_pkg"`
 	BuildDir             string `yaml:"build_dir"`
@@ -18,7 +18,7 @@ type EthosConfig struct {
 func DefaultEthosConfig() *EthosConfig {
 	return &EthosConfig{
 		Compiler:             "solc",
-		ContractsDir:         "./contracts",
+		SourcesDir:           "./contracts",
 		ContractBindingsDir:  "./pkg/contracts",
 		ContractsBindingsPkg: "main",
 		BuildDir:             "./build",
